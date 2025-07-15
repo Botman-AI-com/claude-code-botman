@@ -25,6 +25,21 @@ result = claude("Create a hello world Python script")
 print(result)
 ```
 
+### Using Rules from CLAUDE.md Files
+
+```python
+from claude_code_botman import ClaudeCode
+
+# Load rules from a CLAUDE.md file
+claude = ClaudeCode(
+    model="claude-sonnet-4-20250514",
+    rules="./path/to/CLAUDE.md"
+)
+
+result = claude("Create a Python function following our project guidelines")
+print(result)
+```
+
 ## Features
 
 - Complete CLI support with all arguments
@@ -32,3 +47,4 @@ print(result)
 - Session management and continuation
 - Multiple output formats (text, JSON, stream-JSON)
 - Environment configuration
+- **Rules system for Claude.md files** 🆕

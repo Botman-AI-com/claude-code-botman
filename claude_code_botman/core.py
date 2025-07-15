@@ -77,6 +77,7 @@ class ClaudeCode:
         verbose: bool = False,
         max_turns: int = 10,
         config: Optional[ClaudeConfig] = None,
+        rules: Optional[Union[str, Path]] = None,
         **kwargs
     ):
         """
@@ -90,11 +91,23 @@ class ClaudeCode:
             verbose: Enable verbose logging
             max_turns: Maximum number of agentic turns
             config: Optional ClaudeConfig instance
+            rules: Path to CLAUDE.md file with rules and instructions
             **kwargs: Additional configuration options
         """
+        # Load rules from file if provided
+        rules_content = None
+        if rules is not None:
+            rules_content = self._load_rules_file(rules)
+        
         # Use provided config or create new one
         if config is not None:
             self.config = config
+            # Apply rules to existing config if provided
+            if rules_content and not self.config.append_system_prompt:
+                self.config.append_system_prompt = rules_content
+            elif rules_content and self.config.append_system_prompt:
+                # Append rules to existing system prompt
+                self.config.append_system_prompt = f"{self.config.append_system_prompt}\n\n{rules_content}"
         else:
             config_params = {
                 "model": model,
@@ -105,6 +118,10 @@ class ClaudeCode:
                 "max_turns": max_turns,
                 **kwargs
             }
+            # Add rules to system prompt if provided
+            if rules_content:
+                config_params["append_system_prompt"] = rules_content
+            
             self.config = ClaudeConfig(**config_params)
         
         # Validate Claude CLI installation
@@ -118,6 +135,9 @@ class ClaudeCode:
         # Setup logging if verbose
         if self.config.verbose:
             logging.getLogger().setLevel(logging.DEBUG)
+        
+        if rules_content and self.config.verbose:
+            logger.info(f"Loaded rules from: {rules}")
         
         logger.info(f"ClaudeCode initialized with model: {self.config.model}")
     
@@ -377,6 +397,52 @@ class ClaudeCode:
                 )
             
             self._current_session_id = session_id
+    
+    def _load_rules_file(self, rules_path: Union[str, Path]) -> str:
+        """
+        Load rules from a CLAUDE.md file.
+        
+        Args:
+            rules_path: Path to the rules file (usually CLAUDE.md)
+            
+        Returns:
+            str: Content of the rules file
+            
+        Raises:
+            ClaudeCodePathError: If the rules file doesn't exist or can't be read
+        """
+        try:
+            rules_file = Path(rules_path).resolve()
+            
+            if not rules_file.exists():
+                raise ClaudeCodePathError(
+                    str(rules_path),
+                    f"Rules file not found: {rules_file}"
+                )
+            
+            if not rules_file.is_file():
+                raise ClaudeCodePathError(
+                    str(rules_path),
+                    f"Rules path is not a file: {rules_file}"
+                )
+            
+            # Read the file content
+            content = rules_file.read_text(encoding='utf-8')
+            
+            if not content.strip():
+                logger.warning(f"Rules file is empty: {rules_file}")
+                return ""
+            
+            logger.debug(f"Loaded {len(content)} characters from rules file: {rules_file}")
+            return content
+            
+        except Exception as e:
+            if isinstance(e, ClaudeCodePathError):
+                raise
+            raise ClaudeCodePathError(
+                str(rules_path),
+                f"Error reading rules file: {e}"
+            )
     
     def execute_command(
         self,

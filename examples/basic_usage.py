@@ -57,7 +57,7 @@ def main():
         """)
         
         print(f"Response: {result}")
-        print(f"Files created: {claude_code._last_response.files_created if hasattr(claude_code, '_last_response') else 'N/A'}")
+        print()  # Simplified - the response parsing happens internally
         print()
         
         # Example 2: Working with specific directory
@@ -89,8 +89,54 @@ def main():
         print(f"Response from Haiku: {result}")
         print()
         
-        # Example 4: Continuing conversations
-        print("💬 Example 4: Continuing conversations")
+        # Example 4: Using rules from CLAUDE.md file
+        print("📋 Example 4: Using rules from CLAUDE.md file")
+        print("-" * 40)
+        
+        # Create a sample CLAUDE.md file
+        claude_md_content = """# Project Rules and Configuration
+
+## Code Style Preferences
+- Use clear, descriptive variable names
+- Add docstrings to all functions
+- Follow PEP 8 style guidelines
+- Maximum line length: 88 characters
+
+## File Organization
+- Put all utility functions in utils.py
+- Use main() function with if __name__ == "__main__" guard
+- Include proper imports at the top
+
+## Specific Instructions
+- Always add error handling with try-catch blocks
+- Write code that is self-documenting
+- Prefer readability over clever tricks
+"""
+        
+        # Write the rules file
+        rules_file = Path("./example_claude.md")
+        rules_file.write_text(claude_md_content)
+        
+        try:
+            # Initialize ClaudeCode with rules
+            claude_with_rules = ClaudeCode(
+                model="claude-sonnet-4-20250514",
+                api_key=api_key,
+                rules="./example_claude.md",
+                verbose=True
+            )
+            
+            result = claude_with_rules("Create a Python utility function that calculates the factorial of a number")
+            print(f"Response with rules applied: {result}")
+            print()
+            
+        finally:
+            # Clean up the rules file
+            if rules_file.exists():
+                rules_file.unlink()
+        
+        # Example 5: Continuing conversations
+        print("💬 Example 5: Continuing conversations")
         print("-" * 40)
         
         # First message
@@ -102,8 +148,8 @@ def main():
         print(f"Continued response: {result2}")
         print()
         
-        # Example 5: Error handling
-        print("⚠️ Example 5: Error handling")
+        # Example 6: Error handling
+        print("⚠️ Example 6: Error handling")
         print("-" * 40)
         
         try:
@@ -113,8 +159,8 @@ def main():
             print(f"Caught expected error: {e}")
         print()
         
-        # Example 6: Getting system information
-        print("ℹ️ Example 6: System information")
+        # Example 7: Getting system information
+        print("ℹ️ Example 7: System information")
         print("-" * 40)
         
         sessions = claude_code.get_sessions()

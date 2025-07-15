@@ -1,0 +1,11 @@
+---
+alwaysApply: false
+---
+Please, commit all recent changes with clear and short commit message, in the current branch.
+When committing recent changes, always use a clear and descriptive commit message following the conventional format:
+  - feat: <message> for new features
+  - fix: <message> for bug fixes
+  - doc: <message> for documentation changes
+  Ensure the message concisely summarizes the change.
+
+Examples: "git commit -m 'feat: new button1'".
