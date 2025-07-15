@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from claude_code_botman import ClaudeCode, ClaudeConfig, ClaudeCodeError
+from claude_code_botman.exceptions import ClaudeCodePathError
 
 
 def demonstrate_permission_modes():
@@ -22,38 +23,22 @@ def demonstrate_permission_modes():
     print("🔒 Permission Modes Demo")
     print("=" * 30)
     
-    # Test different permission modes
-    permission_modes = ["prompt", "allow", "deny", "plan"]
-    
-    for mode in permission_modes:
-        try:
-            config = ClaudeConfig(
-                model="claude-sonnet-4-20250514",
-                permission_mode=mode,
-                verbose=True
-            )
-            
-            claude_code = ClaudeCode(config=config)
-            print(f"✅ Permission mode '{mode}' configured successfully")
-            
-            # Example usage with this permission mode
-            if mode == "allow":
-                # This would allow all operations without prompting
-                print(f"  - Mode '{mode}': All operations allowed without prompting")
-            elif mode == "deny":
-                # This would deny all operations without prompting
-                print(f"  - Mode '{mode}': All operations denied without prompting")
-            elif mode == "plan":
-                # This would show a plan without executing
-                print(f"  - Mode '{mode}': Show execution plan without running")
-            else:
-                # Default prompt mode
-                print(f"  - Mode '{mode}': Prompt user for each operation")
-                
-        except Exception as e:
-            print(f"❌ Error with permission mode '{mode}': {e}")
+    # Test different configuration options
+    try:
+        config = ClaudeConfig(
+            model="claude-sonnet-4-20250514",
+            verbose=True
+        )
         
-        print()
+        claude_code = ClaudeCode(config=config)
+        print(f"✅ ClaudeCode configured successfully")
+        print(f"  - Model: {config.model}")
+        print(f"  - Verbose: {config.verbose}")
+                
+    except Exception as e:
+        print(f"❌ Error with configuration: {e}")
+    
+    print()
 
 
 def demonstrate_tool_configuration():
@@ -62,21 +47,20 @@ def demonstrate_tool_configuration():
     print("=" * 30)
     
     # Configure allowed and disallowed tools
-    config = ClaudeConfig(
-        model="claude-sonnet-4-20250514",
-        allowed_tools=[
-            "Bash(git log:*)",
-            "Bash(git diff:*)",
-            "Read"
-        ],
-        disallowed_tools=[
-            "Bash(rm:*)",
-            "Bash(sudo:*)",
-            "Edit"
-        ],
-        permission_mode="prompt",
-        verbose=True
-    )
+            config = ClaudeConfig(
+            model="claude-sonnet-4-20250514",
+            allowed_tools=[
+                "Bash(git log:*)",
+                "Bash(git diff:*)",
+                "Read"
+            ],
+            disallowed_tools=[
+                "Bash(rm:*)",
+                "Bash(sudo:*)",
+                "Edit"
+            ],
+            verbose=True
+        )
     
     claude_code = ClaudeCode(config=config)
     
@@ -281,6 +265,101 @@ def demonstrate_dangerous_mode():
     print()
 
 
+def demonstrate_rules_functionality():
+    """Demonstrate the new rules parameter functionality."""
+    print("📋 Rules Functionality Demo")
+    print("=" * 30)
+    
+    # Create a comprehensive CLAUDE.md rules file
+    rules_content = """# Claude Code Rules and Configuration
+
+## Code Style Guidelines
+- Use descriptive variable names
+- Add comprehensive docstrings to all functions
+- Follow PEP 8 guidelines strictly
+- Maximum line length: 88 characters
+
+## Error Handling Standards
+- Always use specific exception types
+- Include helpful error messages with context
+- Provide recovery suggestions when possible
+
+## Specific Instructions for This Project
+- Always use the ClaudeConfig class for configuration
+- Keep the API simple and intuitive
+- Focus on developer experience
+"""
+    
+    # Write the rules file
+    rules_file = Path("./test_claude_rules.md")
+    rules_file.write_text(rules_content)
+    
+    try:
+        print("✅ Created rules file:")
+        print(f"  File: {rules_file.name}")
+        print(f"  Size: {len(rules_content)} characters")
+        print()
+        
+        # Test 1: Basic rules usage
+        print("🔧 Test 1: Basic rules usage")
+        print("-" * 25)
+        
+        claude_with_rules = ClaudeCode(
+            model="claude-sonnet-4-20250514",
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            rules=rules_file,
+            verbose=True
+        )
+        
+        print("✅ ClaudeCode initialized with rules")
+        print(f"  Rules loaded from: {rules_file}")
+        print()
+        
+        # Test 2: Rules with existing config
+        print("🔧 Test 2: Rules with existing config")
+        print("-" * 25)
+        
+        config = ClaudeConfig(
+            model="claude-sonnet-4-20250514",
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            append_system_prompt="Always be concise and helpful.",
+            verbose=True
+        )
+        
+        claude_with_config_and_rules = ClaudeCode(
+            config=config,
+            rules=rules_file
+        )
+        
+        print("✅ ClaudeCode initialized with both config and rules")
+        print("  Rules appended to existing system prompt")
+        print()
+        
+        # Test 3: Error handling for missing rules file
+        print("🔧 Test 3: Error handling for missing rules")
+        print("-" * 25)
+        
+        try:
+            claude_missing_rules = ClaudeCode(
+                model="claude-sonnet-4-20250514",
+                api_key=os.getenv("ANTHROPIC_API_KEY"),
+                rules="./nonexistent_rules.md"
+            )
+        except ClaudeCodePathError as e:
+            print(f"✅ Correctly caught missing rules file error: {e}")
+        print()
+        
+    except Exception as e:
+        print(f"❌ Rules functionality error: {e}")
+    finally:
+        # Clean up the rules file
+        if rules_file.exists():
+            rules_file.unlink()
+            print(f"🧹 Cleaned up test rules file: {rules_file.name}")
+    
+    print()
+
+
 def demonstrate_comprehensive_config():
     """Demonstrate a comprehensive configuration with all options."""
     print("🎯 Comprehensive Configuration Demo")
@@ -363,6 +442,7 @@ def main():
         demonstrate_session_management()
         demonstrate_environment_config()
         demonstrate_dangerous_mode()
+        demonstrate_rules_functionality()
         demonstrate_comprehensive_config()
         
         print("✅ All advanced usage examples completed successfully!")
@@ -376,6 +456,7 @@ def main():
         print("  ✓ Environment variable configuration")
         print("  ✓ Dangerous permission skipping")
         print("  ✓ Comprehensive configuration")
+        print("  ✓ Rules functionality")
         
         return 0
         
