@@ -1,0 +1,537 @@
+
+# Claude Code Botman Library Guide
+
+## Overview
+The claude-code-botman library is a comprehensive Python wrapper for Claude Code CLI that enables programmatic interaction with Claude's coding assistant through subprocess calls. This library provides a clean, Pythonic interface for automating Claude Code operations with full support for all official CLI arguments and features.
+
+## Core Architecture
+
+### Main Components
+- **[ClaudeCode](mdc:claude_code_botman/core.py)** - Primary class for CLI interaction with full argument support
+- **[ClaudeConfig](mdc:claude_code_botman/config.py)** - Comprehensive configuration management system
+- **[ClaudeResponse](mdc:claude_code_botman/utils.py)** - Structured response parsing
+- **[Exception Hierarchy](mdc:claude_code_botman/exceptions.py)** - Comprehensive error handling
+
+### Key Design Patterns
+1. **Complete CLI Compatibility**: All official Claude Code CLI arguments supported
+2. **Permission Management**: Fine-grained control over tool permissions and access
+3. **Session Management**: Continue conversations and resume specific sessions
+4. **Configuration-First**: Centralized configuration with validation
+5. **Context Management**: Resource cleanup and session management
+6. **Async Support**: Non-blocking operations with asyncio
+7. **Batch Processing**: Parallel execution of multiple operations
+
+## Core Usage Patterns
+
+### Basic Usage (Primary Interface)
+```python
+from claude_code_botman import ClaudeCode
+
+# Initialize with API key
+claude_code = ClaudeCode(
+    model="claude-sonnet-4-20250514",
+    api_key="sk-ant-api03-...",
+    default_path="./"
+)
+
+# Primary usage pattern - returns string output
+result = claude_code("Create a hello world.js file")
+print(result)  # String response from subprocess
+
+# Work in specific directory
+result = claude_code("Create a service folder", path="./my-project")
+```
+
+### Advanced Configuration with All CLI Arguments
+```python
+from claude_code_botman import ClaudeConfig, ClaudeCode
+
+# Create comprehensive configuration with all CLI features
+config = ClaudeConfig(
+    # Core settings
+    model="claude-opus-4-20250514",
+    api_key="sk-ant-api03-...",
+    timeout=300,
+    verbose=True,
+    max_turns=10,
+    
+    # Output and input formats
+    output_format="json",  # "text", "json", "stream-json"
+    input_format="text",   # "text", "stream-json"
+    
+    # Permission management
+    dangerously_skip_permissions=False,  # Skip all permission checks
+    allowed_tools=["Read", "Edit"],
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"],
+    
+    # Directory access
+    add_dir=["./src", "./tests", "./docs"],
+    
+    # Session management
+    save_sessions=True,
+    session_dir="./claude_sessions",
+    auto_continue=True,
+    
+    # MCP configuration
+    mcp_config="./mcp-config.json",
+    append_system_prompt="Always be helpful and concise",
+    fallback_model="claude-haiku-3-5-20241022",
+    ide=True,
+    strict_mcp_config=False,
+    
+    # Environment variables
+    environment_variables={
+        "NODE_ENV": "development",
+        "DEBUG": "true"
+    }
+)
+
+# Use with ClaudeCode
+claude_code = ClaudeCode(config=config)
+```
+
+### Permission Management
+```python
+from claude_code_botman import ClaudeCode, ClaudeConfig
+
+# Different permission configurations
+permission_configs = {
+    "strict": ClaudeConfig(
+        allowed_tools=["Read", "Edit"],
+        disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"]
+    ),
+    "permissive": ClaudeConfig(
+        dangerously_skip_permissions=True  # ⚠️ Use with caution!
+    ),
+    "selective": ClaudeConfig(
+        allowed_tools=["Read", "Edit", "Bash(git:*)"],
+        disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)", "Bash(curl:*)"]
+    )
+}
+
+# Use different configurations
+strict_claude = ClaudeCode(config=permission_configs["strict"])
+result = strict_claude("Create a safe configuration file")
+```
+
+### Session Management
+```python
+from claude_code_botman import ClaudeCode
+
+claude_code = ClaudeCode(api_key="sk-ant-api03-...")
+
+# Continue the most recent conversation
+result = claude_code.continue_conversation(
+    "Add error handling to the previous code"
+)
+
+# Resume a specific session
+result = claude_code.resume_session(
+    session_id="session_123",
+    prompt="Continue from where we left off"
+)
+
+# Get current session information
+session = claude_code.get_current_session()
+if session:
+    print(f"Session ID: {session.session_id}")
+    print(f"Path: {session.path}")
+```
+
+### Multiple Output Formats
+```python
+from claude_code_botman import ClaudeCode, ClaudeConfig
+
+# Text output (default)
+text_config = ClaudeConfig(output_format="text")
+text_claude = ClaudeCode(config=text_config)
+result = text_claude("Create a function")  # Returns string
+
+# JSON output for structured data
+json_config = ClaudeConfig(output_format="json")
+json_claude = ClaudeCode(config=json_config)
+result = json_claude("Analyze this code")  # Returns JSON string
+
+# Stream JSON for real-time processing
+stream_config = ClaudeConfig(output_format="stream-json")
+stream_claude = ClaudeCode(config=stream_config)
+result = stream_claude("Process large file")  # Returns stream JSON
+```
+
+### Environment Variable Configuration
+```python
+from claude_code_botman import load_config_from_env
+
+# Load configuration from environment variables
+# Set these in your environment:
+# CLAUDE_MODEL=claude-opus-4-20250514
+# CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=false
+# CLAUDE_OUTPUT_FORMAT=json
+# CLAUDE_ALLOWED_TOOLS=Read,Edit,Bash(git:*)
+# CLAUDE_ADD_DIR=./src,./tests
+
+config = load_config_from_env()
+claude_code = ClaudeCode(config=config)
+```
+
+## Complete CLI Arguments Support
+
+### Permission and Security Arguments
+- `dangerously_skip_permissions`: Skip all permission checks (use with extreme caution)
+- `allowed_tools`: List of allowed tools/operations (e.g., ["Read", "Edit", "Bash(git:*)"])
+- `disallowed_tools`: List of forbidden tools/operations (e.g., ["Bash(rm:*)", "Bash(sudo:*)"])
+
+### Input/Output Control
+- `output_format`: Response format ("text", "json", "stream-json")
+- `input_format`: Input format ("text", "stream-json")
+- `verbose`: Enable verbose logging and debug mode
+- `max_turns`: Maximum conversation turns
+
+### Directory and Access Control
+- `add_dir`: Additional working directories
+- `default_path`: Default working directory
+- `session_dir`: Directory for session storage
+
+### Session Management
+- `save_sessions`: Enable session persistence
+- `auto_continue`: Automatically continue conversations
+
+### MCP and Advanced Features
+- `mcp_config`: MCP configuration file path or JSON string
+- `append_system_prompt`: Additional system prompt text
+- `fallback_model`: Fallback model when primary is overloaded
+- `ide`: Automatically connect to IDE on startup
+- `strict_mcp_config`: Only use MCP servers from config
+
+### Environment Integration
+- `environment_variables`: Custom environment variables for CLI
+
+## Model Support
+
+### Supported Models
+- `claude-opus-4-20250514` - Most powerful, best for complex tasks
+- `claude-sonnet-4-20250514` - Balanced performance (default)
+- `claude-haiku-3-5-20241022` - Fastest, good for simple tasks
+
+### Model Aliases
+- `opus` → `claude-opus-4-20250514`
+- `sonnet` → `claude-sonnet-4-20250514`
+- `haiku` → `claude-haiku-3-5-20241022`
+
+## Error Handling Strategy
+
+### Exception Hierarchy
+```python
+from claude_code_botman import (
+    ClaudeCodeError,              # Base exception
+    ClaudeCodeNotFoundError,      # CLI not found
+    ClaudeCodeTimeoutError,       # Operation timeout
+    ClaudeCodeExecutionError,     # Subprocess failure
+    ClaudeCodeAuthenticationError, # API key issues
+    ClaudeCodePathError,          # Path validation errors
+    ClaudeCodeConfigurationError  # Config validation errors
+)
+
+try:
+    result = claude_code("Create a file")
+except ClaudeCodeNotFoundError:
+    print("Install Claude CLI: npm install -g @anthropic-ai/claude-code")
+except ClaudeCodeAuthenticationError:
+    print("Check your API key")
+except ClaudeCodeConfigurationError as e:
+    print(f"Configuration error: {e}")
+except ClaudeCodeError as e:
+    print(f"General error: {e}")
+```
+
+## Response Processing
+
+### ClaudeResponse Properties
+```python
+response = claude_code._execute_claude_command("Create files")
+
+# Access parsed information
+print(response.text)              # Raw text response
+print(response.files_created)     # List of created files
+print(response.files_modified)    # List of modified files
+print(response.commands_executed) # List of executed commands
+print(response.errors)            # List of errors
+print(response.warnings)          # List of warnings
+print(response.success)           # Boolean success status
+print(response.exit_code)         # Process exit code
+print(response.stderr)            # Standard error output
+```
+
+## Advanced Usage Patterns
+
+### Context Management
+```python
+from claude_code_botman import ClaudeCodeContext
+
+with ClaudeCodeContext(
+    dangerously_skip_permissions=False,
+    allowed_tools=["Read", "Edit"]
+) as claude_code:
+    result = claude_code("Create a React component")
+    print(f"Files created: {result.files_created}")
+    # Automatic cleanup on exit
+```
+
+### Batch Operations with Permissions
+```python
+from claude_code_botman import ClaudeCodeBatch
+
+batch = ClaudeCodeBatch(
+    claude_code, 
+    max_parallel=3,
+    dangerously_skip_permissions=False  # Maintain safety
+)
+batch.add_operation("Create main.py")
+batch.add_operation("Create utils.py")
+batch.add_operation("Create tests.py")
+results = batch.execute_batch()
+```
+
+### Async Operations with Session Management
+```python
+import asyncio
+
+async def async_session_example():
+    # Continue conversation asynchronously
+    result = await claude_code.async_continue_conversation(
+        "Add documentation to the code"
+    )
+    
+    # Resume session asynchronously
+    result = await claude_code.async_resume_session(
+        "session_456",
+        "Continue the implementation"
+    )
+    
+    return result
+
+# Multiple async operations with different permissions
+async def parallel_operations():
+    tasks = [
+        claude_code.async_call("Create config.py", allowed_tools=["Read", "Edit"]),
+        claude_code.async_call("Create utils.py", disallowed_tools=["Bash(rm:*)"]),
+        claude_code.async_call("Create main.py", dangerously_skip_permissions=True)
+    ]
+    results = await asyncio.gather(*tasks)
+    return results
+```
+
+## Development Guidelines for AI Agents
+
+### When Working with This Library
+
+1. **Always Validate API Keys**: Check for `ANTHROPIC_API_KEY` environment variable
+2. **Use Appropriate Models**: 
+   - Opus for complex, multi-file operations
+   - Sonnet for balanced general use
+   - Haiku for simple, fast operations
+3. **Configure Permissions Appropriately**: 
+   - Use specific `allowed_tools` and `disallowed_tools` for security
+   - Only use `dangerously_skip_permissions=True` in controlled environments
+   - Be explicit about tool permissions
+4. **Handle Paths Safely**: Use Path objects and validate directory existence
+5. **Implement Proper Error Handling**: Catch specific exceptions
+6. **Consider Async for Multiple Operations**: Use batch processing or async calls
+7. **Monitor Session State**: Track and clean up sessions appropriately
+8. **Use Appropriate Output Formats**: JSON for structured data, text for simple responses
+
+### Security Best Practices
+
+1. **Permission Management**: Always use the most restrictive permissions possible
+2. **Tool Restrictions**: Explicitly allow/disallow tools based on requirements
+3. **API Key Security**: Never hardcode API keys, use environment variables
+4. **Path Validation**: Always validate and sanitize file paths
+5. **Subprocess Safety**: Use proper shell escaping for arguments
+6. **Session Security**: Clean up sessions to prevent information leakage
+7. **Environment Isolation**: Use environment variables for sensitive configuration
+
+### Common Patterns to Follow
+
+#### Safe Permission Configuration
+```python
+from claude_code_botman import ClaudeConfig, ClaudeCode
+
+def create_safe_config(api_key: str, operation_type: str) -> ClaudeConfig:
+    """Create a safe configuration based on operation type."""
+    if operation_type == "development":
+        return ClaudeConfig(
+            api_key=api_key,
+            allowed_tools=["Read", "Edit", "Bash(git:*)"],
+            disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)", "Bash(curl:*)"]
+        )
+    elif operation_type == "production":
+        return ClaudeConfig(
+            api_key=api_key,
+            allowed_tools=["Read"],
+            disallowed_tools=["Edit", "Bash(*)"]
+        )
+    else:
+        return ClaudeConfig(
+            api_key=api_key,
+            allowed_tools=["Read", "Edit"]
+        )
+```
+
+#### Session Management Pattern
+```python
+def managed_session_operation(claude_code: ClaudeCode, operations: list):
+    """Perform operations with proper session management."""
+    session_id = None
+    try:
+        # Start with first operation
+        result = claude_code(operations[0])
+        session_id = claude_code.get_current_session().session_id
+        
+        # Continue with remaining operations
+        for operation in operations[1:]:
+            result = claude_code.continue_conversation(operation)
+            
+        return result
+    except Exception as e:
+        # Clean up session on error
+        if session_id:
+            claude_code.cleanup_session(session_id)
+        raise
+```
+
+#### Multi-Format Response Handling
+```python
+def handle_response_format(claude_code: ClaudeCode, prompt: str, format_type: str):
+    """Handle different response formats appropriately."""
+    if format_type == "json":
+        config = claude_code.config
+        config.output_format = "json"
+        result = claude_code(prompt)
+        return json.loads(result)
+    elif format_type == "stream":
+        config = claude_code.config
+        config.output_format = "stream-json"
+        result = claude_code(prompt)
+        return parse_stream_json(result)
+    else:
+        result = claude_code(prompt)
+        return result
+```
+
+## Testing Guidelines
+
+### Unit Testing with Permissions
+```python
+import pytest
+from unittest.mock import Mock, patch
+from claude_code_botman import ClaudeCode, ClaudeConfig
+
+@patch('claude_code_botman.core.subprocess.run')
+def test_permission_configuration(mock_run):
+    """Test permission configuration behavior."""
+    mock_run.return_value = Mock(
+        returncode=0,
+        stdout="Permission granted, file created",
+        stderr=""
+    )
+    
+    config = ClaudeConfig(
+        api_key="test-key",
+        allowed_tools=["Read", "Edit"],
+        disallowed_tools=["Bash(rm:*)"]
+    )
+    claude_code = ClaudeCode(config=config)
+    result = claude_code("Create a test file")
+    
+    # Verify permission arguments were passed
+    call_args = mock_run.call_args[0][0]
+    assert "--allowedTools" in call_args
+    assert "Read" in call_args
+    assert "Edit" in call_args
+    assert "--disallowedTools" in call_args
+    assert "Bash(rm:*)" in call_args
+```
+
+### Integration Testing with Sessions
+```python
+@pytest.mark.integration
+def test_session_continuation():
+    """Test session continuation functionality."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        pytest.skip("No API key available")
+    
+    claude_code = ClaudeCode(api_key=api_key, save_sessions=True)
+    
+    # First operation
+    result1 = claude_code("Create a variable x = 5")
+    
+    # Continue conversation
+    result2 = claude_code.continue_conversation("Now print x")
+    
+    assert "5" in result2  # Should reference the previous variable
+```
+
+## Performance Considerations
+
+1. **Permission Configuration**: Specific tool permissions are more efficient than broad restrictions
+2. **Output Format Efficiency**: Text format is fastest, JSON adds parsing overhead
+3. **Session Management**: Persistent sessions use more memory but improve context
+4. **Batch Operations**: Use for multiple operations to reduce subprocess overhead
+5. **Async Operations**: Use for I/O-bound operations and multiple parallel tasks
+6. **Tool Restrictions**: Limiting tools can improve performance and security
+
+## Complete Environment Variable Reference
+
+```bash
+# Core settings
+CLAUDE_MODEL=claude-sonnet-4-20250514
+CLAUDE_TIMEOUT=300
+CLAUDE_MAX_TURNS=10
+CLAUDE_VERBOSE=true
+CLAUDE_DEFAULT_PATH=./
+
+# Format settings
+CLAUDE_OUTPUT_FORMAT=json
+CLAUDE_INPUT_FORMAT=text
+
+# Permission settings
+CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=false
+CLAUDE_ALLOWED_TOOLS=Read,Edit,Bash(git:*)
+CLAUDE_DISALLOWED_TOOLS=Bash(rm:*),Bash(sudo:*)
+
+# Directory settings
+CLAUDE_ADD_DIR=./src,./tests,./docs
+
+# Session settings
+CLAUDE_SAVE_SESSIONS=true
+CLAUDE_SESSION_DIR=./claude_sessions
+CLAUDE_AUTO_CONTINUE=true
+
+# MCP settings
+CLAUDE_MCP_CONFIG=./mcp-config.json
+CLAUDE_APPEND_SYSTEM_PROMPT="Be helpful and concise"
+CLAUDE_FALLBACK_MODEL=claude-haiku-3-5-20241022
+CLAUDE_IDE=true
+CLAUDE_STRICT_MCP_CONFIG=false
+
+# Custom environment variables
+CLAUDE_ENV_NODE_ENV=development
+CLAUDE_ENV_DEBUG=true
+```
+
+## File References
+
+- **Core Implementation**: [claude_code_botman/core.py](mdc:claude_code_botman/core.py)
+- **Configuration**: [claude_code_botman/config.py](mdc:claude_code_botman/config.py)
+- **Utilities**: [claude_code_botman/utils.py](mdc:claude_code_botman/utils.py)
+- **Exceptions**: [claude_code_botman/exceptions.py](mdc:claude_code_botman/exceptions.py)
+- **Tests**: [tests/test_core.py](mdc:tests/test_core.py), [tests/test_utils.py](mdc:tests/test_utils.py)
+- **Examples**: [examples/basic_usage.py](mdc:examples/basic_usage.py), [examples/advanced_usage.py](mdc:examples/advanced_usage.py)
+- **Package Config**: [pyproject.toml](mdc:pyproject.toml), [setup.py](mdc:setup.py)
+- **Main Demo**: [main.py](mdc:main.py)
+
+This comprehensive rule serves as the definitive guide for AI agents working with the claude-code-botman library, ensuring consistent usage patterns, security best practices, and full utilization of all available CLI features and arguments.
+
+
+This comprehensive rule serves as the definitive guide for AI agents working with the claude-code-botman library, ensuring consistent usage patterns, security best practices, and full utilization of all available CLI features and arguments.

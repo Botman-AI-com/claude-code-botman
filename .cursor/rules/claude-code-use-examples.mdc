@@ -1,0 +1,230 @@
+# Claude Code Botman Usage Examples
+
+This rule provides comprehensive examples for using the claude-code-botman library based on [main.py](mdc:main.py).
+
+## Basic Setup and Initialization
+
+### Required Imports
+```python
+import os
+from claude_code_botman import ClaudeCode, ClaudeCodeError, ClaudeConfig
+```
+
+### API Key Configuration
+Always check for API key before initializing:
+```python
+api_key = os.getenv("ANTHROPIC_API_KEY")
+if not api_key:
+    print("❌ Error: ANTHROPIC_API_KEY environment variable not set")
+    print("export ANTHROPIC_API_KEY='sk-ant-api03-...'")
+    return 1
+```
+
+### Basic ClaudeCode Initialization
+```python
+claude_code = ClaudeCode(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    default_path="./target_folder",
+    timeout=60,
+    verbose=True,
+    dangerously_skip_permissions=True  # Only for testing
+)
+```
+
+## Configuration Patterns
+
+### Using ClaudeConfig for Advanced Setup
+```python
+# Configuration with allowed tools only
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    allowed_tools=["Read", "Edit"],
+    verbose=True,
+    timeout=30
+)
+claude_code = ClaudeCode(config=config, default_path="./target_folder")
+
+# Configuration with disallowed tools
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"],
+    verbose=True,
+    timeout=30
+)
+
+# Mixed tool configuration
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    allowed_tools=["Read", "Bash(git log:*)"],
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"],
+    verbose=True
+)
+```
+
+### Environment Variable Configuration
+```python
+# Set environment variables
+os.environ["CLAUDE_MODEL"] = "claude-sonnet-4-20250514"
+os.environ["CLAUDE_VERBOSE"] = "false"
+os.environ["CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS"] = "true"
+os.environ["CLAUDE_OUTPUT_FORMAT"] = "text"
+os.environ["CLAUDE_MAX_TURNS"] = "5"
+
+# Load configuration from environment
+from claude_code_botman.config import load_config_from_env
+env_config = load_config_from_env()
+claude_code = ClaudeCode(config=env_config, default_path="./target_folder")
+```
+
+### Output Format Configuration
+```python
+# Text output format
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    output_format="text",
+    dangerously_skip_permissions=True,
+    verbose=False
+)
+
+# JSON output format
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    output_format="json",
+    dangerously_skip_permissions=True,
+    verbose=False
+)
+```
+
+## Usage Patterns
+
+### Basic File Operations
+```python
+# Create a Python file
+result = claude_code("""
+Create a Python file called 'script.py' that:
+1. Prints "Hello from Claude Code!"
+2. Has a main function that demonstrates basic Python features
+3. Includes proper if __name__ == "__main__" guard
+4. Add some comments explaining what it does
+""")
+
+# Create a configuration file
+result = claude_code("""
+Create a JSON configuration file called 'config.json' with:
+1. Application name and version
+2. Database connection settings (placeholder values)
+3. Logging configuration
+4. Feature flags
+""")
+```
+
+### Session Management
+```python
+# Continue conversation in same session
+try:
+    result = claude_code.continue_conversation(
+        "Now create a README.md file that explains what these files do"
+    )
+    print(f"✅ Response: {result}")
+except ClaudeCodeError as e:
+    print(f"❌ Session continuation error: {e}")
+
+# Get session information
+current_session = claude_code.get_current_session()
+if current_session:
+    print(f"Current session ID: {current_session.session_id}")
+    print(f"Session path: {current_session.path}")
+
+sessions = claude_code.get_sessions()
+print(f"Total active sessions: {len(sessions)}")
+```
+
+## Error Handling
+
+### Proper Exception Handling
+```python
+try:
+    result = claude_code("Your prompt here")
+    print(f"✅ Success: {result}")
+except ClaudeCodeError as e:
+    print(f"❌ Claude Code error: {e}")
+    print("Troubleshooting tips:")
+    print("1. Make sure your API key is valid and has sufficient credits")
+    print("2. Check your internet connection")
+    print("3. Verify that claude-code CLI is installed and accessible")
+except Exception as e:
+    print(f"❌ Unexpected error: {e}")
+```
+
+## CLI Arguments Generation
+
+### Convert Configuration to CLI Args
+```python
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    allowed_tools=["Read", "Bash(git log:*)"],
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"],
+    verbose=True
+)
+
+# Generate CLI arguments
+cli_args = config.to_cli_args()
+print(f"Generated CLI args: {' '.join(cli_args)}")
+```
+
+## Best Practices
+
+1. **Always check for API key** before initializing ClaudeCode
+2. **Use appropriate timeouts** - longer for complex operations, shorter for simple ones
+3. **Configure permissions carefully** - only use `dangerously_skip_permissions=True` for testing
+4. **Handle exceptions properly** - catch both ClaudeCodeError and general exceptions
+5. **Use session management** for multi-turn conversations
+6. **Set appropriate verbosity** - verbose for debugging, quiet for production
+7. **Choose output format** based on your needs (text for human-readable, json for parsing)
+
+## Common Configuration Combinations
+
+### Development/Testing Setup
+```python
+claude_code = ClaudeCode(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    default_path="./dev_folder",
+    timeout=60,
+    verbose=True,
+    dangerously_skip_permissions=True
+)
+```
+
+### Production Setup
+```python
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    allowed_tools=["Read", "Edit"],
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)", "Bash(chmod:*)"],
+    verbose=False,
+    timeout=30,
+    output_format="json"
+)
+claude_code = ClaudeCode(config=config, default_path="./production_folder")
+```
+
+### Git Operations Setup
+```python
+config = ClaudeConfig(
+    model="claude-sonnet-4-20250514",
+    api_key=api_key,
+    allowed_tools=["Read", "Edit", "Bash(git:*)"],
+    disallowed_tools=["Bash(rm:*)", "Bash(sudo:*)"],
+    verbose=True
+)
+claude_code = ClaudeCode(config=config, default_path="./git_repo")
+```
