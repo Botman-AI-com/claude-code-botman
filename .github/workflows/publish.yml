@@ -35,7 +35,4 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # No username/password needed with OIDC!
-          # If you want to publish to TestPyPI, add:
-          # repository-url: https://test.pypi.org/legacy/ 
+        # No username/password needed with OIDC! 
