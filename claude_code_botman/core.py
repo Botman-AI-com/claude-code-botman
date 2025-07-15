@@ -171,12 +171,24 @@ class ClaudeCode:
         )
         
         if not response.success:
-            raise ClaudeCodeExecutionError(
-                response.exit_code,
-                response.raw_output,
-                response.stderr,
-                message=f"Claude execution failed: {response.errors}"
-            )
+            # Log detailed information for debugging
+            logger.error(f"Claude execution failed with exit code {response.exit_code}")
+            if response.errors:
+                logger.error(f"Detected errors: {response.errors}")
+            if response.stderr:
+                logger.error(f"Stderr: {response.stderr}")
+            
+            # Only raise an exception if there are actual errors or non-zero exit code
+            if response.exit_code != 0 or (response.errors and any(error.strip() for error in response.errors)):
+                raise ClaudeCodeExecutionError(
+                    response.exit_code,
+                    response.raw_output,
+                    response.stderr,
+                    message=f"Claude execution failed: {response.errors if response.errors else 'Non-zero exit code'}"
+                )
+            else:
+                # If exit code is 0 and no real errors, treat as success despite error parsing
+                logger.warning("False positive error detection - treating as success based on exit code")
         
         return response.text
     

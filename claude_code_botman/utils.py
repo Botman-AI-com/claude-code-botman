@@ -40,7 +40,7 @@ class ClaudeResponse:
     raw_output: str
     exit_code: int = 0
     stderr: str = ""
-    timestamp: datetime = None
+    timestamp: Optional[datetime] = None
     
     def __post_init__(self):
         """Initialize response parsing."""
@@ -127,16 +127,49 @@ class ClaudeResponse:
         """Extract error messages from output."""
         errors = []
         
-        patterns = [
-            r"Error:\s*([^\n]+)",
-            r"ERROR:\s*([^\n]+)",
-            r"Failed:\s*([^\n]+)",
-            r"Exception:\s*([^\n]+)",
-        ]
+        # Only consider actual error lines, not content within code blocks or docstrings
+        lines = self.raw_output.split('\n')
+        in_code_block = False
         
-        for pattern in patterns:
-            matches = re.findall(pattern, self.raw_output, re.IGNORECASE)
-            errors.extend(matches)
+        for line in lines:
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                continue
+                
+            # Track code block boundaries
+            if stripped.startswith('```'):
+                in_code_block = not in_code_block
+                continue
+                
+            # Skip lines inside code blocks
+            if in_code_block:
+                continue
+                
+            # Skip debug lines
+            if stripped.startswith('[DEBUG]'):
+                continue
+                
+            # Only match actual error patterns at the beginning of lines
+            error_patterns = [
+                r'^Error:\s*(.+)',
+                r'^ERROR:\s*(.+)', 
+                r'^\[ERROR\]\s*(.+)',
+                r'^API Error:\s*(.+)',
+                r'^Fatal error:\s*(.+)',
+                r'^CommandError:\s*(.+)',
+                r'^Exception:\s*(.+)',
+                # Only match "Failed" when it's clearly an error message
+                r'^Failed to\s*(.+)',
+                r'^Operation failed:\s*(.+)',
+            ]
+            
+            for pattern in error_patterns:
+                match = re.match(pattern, stripped, re.IGNORECASE)
+                if match:
+                    errors.append(match.group(1))
+                    break
         
         return errors
     
@@ -219,7 +252,13 @@ class ClaudeResponse:
     @property
     def success(self) -> bool:
         """Check if operation was successful."""
-        return self.exit_code == 0 and not self.has_errors
+        # Command succeeded if exit code is 0 and no real errors detected
+        if self.exit_code != 0:
+            return False
+            
+        # Check for actual error indicators (not just any text that contains error words)
+        real_errors = [error for error in self.errors if error and len(error.strip()) > 0]
+        return len(real_errors) == 0
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert response to dictionary."""
@@ -227,7 +266,7 @@ class ClaudeResponse:
             "raw_output": self.raw_output,
             "exit_code": self.exit_code,
             "stderr": self.stderr,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "parsed_content": self.parsed_content,
             "success": self.success,
         }
@@ -584,7 +623,10 @@ def retry_on_failure(max_retries: int = 3, delay: float = 1.0, backoff: float = 
                     else:
                         logger.error(f"{func.__name__} failed after {max_retries + 1} attempts")
             
-            raise last_exception
+            if last_exception:
+                raise last_exception
+            else:
+                raise RuntimeError(f"{func.__name__} failed after {max_retries + 1} attempts")
         
         return wrapper
     return decorator 

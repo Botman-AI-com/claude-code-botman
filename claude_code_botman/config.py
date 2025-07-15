@@ -14,11 +14,11 @@ import json
 from .exceptions import ClaudeCodeConfigurationError, ClaudeCodeModelError, ClaudeCodePathError
 
 
-# Supported Claude models
+# Supported Claude models (updated for production)
 SUPPORTED_MODELS = {
     "claude-opus-4-20250514": "Claude Opus 4 (most powerful)",
     "claude-sonnet-4-20250514": "Claude Sonnet 4 (balanced)",
-    "claude-haiku-3-5-20241022": "Claude Haiku 3.5 (fastest)",
+    "claude-3-5-haiku-20241022": "Claude 3.5 Haiku (fastest)",
     "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet (legacy)",
     "claude-3-opus-20240229": "Claude 3 Opus (legacy)",
 }
@@ -27,10 +27,10 @@ SUPPORTED_MODELS = {
 MODEL_ALIASES = {
     "opus": "claude-opus-4-20250514",
     "sonnet": "claude-sonnet-4-20250514",
-    "haiku": "claude-haiku-3-5-20241022",
+    "haiku": "claude-3-5-haiku-20241022",
     "opus-4": "claude-opus-4-20250514",
     "sonnet-4": "claude-sonnet-4-20250514",
-    "haiku-3.5": "claude-haiku-3-5-20241022",
+    "haiku-3.5": "claude-3-5-haiku-20241022",
 }
 
 # Default configuration values
