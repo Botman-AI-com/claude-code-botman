@@ -1,0 +1,41 @@
+name: Publish Python 🐍 distribution 📦 to PyPI (Poetry)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"  # Only publish on version tags
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read
+
+    environment: pypi  # Only if you set up an environment in GitHub
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Build package
+        run: poetry build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # No username/password needed with OIDC!
+          # If you want to publish to TestPyPI, add:
+          # repository-url: https://test.pypi.org/legacy/ 
