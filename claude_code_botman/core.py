@@ -265,6 +265,7 @@ class ClaudeCode:
         try:
             result = subprocess.run(
                 command,
+                input=prompt,
                 cwd=work_path,
                 capture_output=True,
                 text=True,
