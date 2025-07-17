@@ -173,9 +173,6 @@ class ClaudeConfig:
         """Convert configuration to CLI arguments."""
         args = []
         
-        # Model
-        args.extend(["--model", self.model])
-        
         # Output format
         if self.output_format != "text":
             args.extend(["--output-format", self.output_format])

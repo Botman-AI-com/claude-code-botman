@@ -360,8 +360,10 @@ class ClaudeCode:
         if kwargs:
             command.extend(format_command_args(**kwargs))
         
-        # Add prompt (escaped for safety)
-        command.append(escape_shell_arg(prompt))
+        # When using print mode, pass prompt via stdin instead of command argument
+        # When not using print mode, add prompt as command argument
+        if not use_print_mode:
+            command.append(escape_shell_arg(prompt))
         
         return command
     
